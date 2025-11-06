@@ -1,48 +1,67 @@
 """
-Database Schemas
+Database Schemas for GetaiCertified
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model corresponds to a MongoDB collection (lowercased class name).
 """
+from typing import List, Optional
+from pydantic import BaseModel, Field, EmailStr
+from datetime import datetime
 
-from pydantic import BaseModel, Field
-from typing import Optional
-
-# Example schemas (replace with your own):
 
 class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
     name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    email: EmailStr = Field(..., description="Email address")
+    avatar_url: Optional[str] = Field(None, description="Profile image URL")
+    referred_by: Optional[str] = Field(None, description="Referral code of the inviter")
+    referral_code: Optional[str] = Field(None, description="User's unique referral code")
+    points: int = Field(0, description="Gamified XP points")
+    badges: List[str] = Field(default_factory=list, description="List of earned badges")
+    is_admin: bool = Field(False, description="Admin access flag")
 
-class Product(BaseModel):
-    """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
-    """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
 
-# Add your own schemas here:
-# --------------------------------------------------
+class Course(BaseModel):
+    title: str
+    slug: str
+    description: Optional[str] = None
+    weeks: int = Field(3, description="Number of weeks in the course")
+    tools: List[str] = Field(default_factory=list)
+    is_active: bool = True
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+
+class Lesson(BaseModel):
+    course_slug: str
+    week: int
+    title: str
+    content: Optional[str] = None
+    video_url: Optional[str] = None
+    quiz: Optional[dict] = None  # { questions: [{q, options, answer}], passing_score }
+
+
+class Enrollment(BaseModel):
+    user_email: EmailStr
+    course_slug: str
+    status: str = Field("enrolled", description="enrolled|completed|cancelled")
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+
+class Progress(BaseModel):
+    user_email: EmailStr
+    course_slug: str
+    lessons_completed: List[str] = Field(default_factory=list)
+    week_unlocked: int = 1
+    xp: int = 0
+
+
+class Certificate(BaseModel):
+    user_email: EmailStr
+    course_slug: str
+    certificate_id: str
+    pdf_url: Optional[str] = None
+    verified: bool = False
+
+
+class Referral(BaseModel):
+    code: str
+    owner_email: EmailStr
+    redemptions: int = 0
